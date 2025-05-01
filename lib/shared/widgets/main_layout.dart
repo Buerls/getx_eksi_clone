@@ -8,6 +8,7 @@ class MainLayout extends StatelessWidget {
   final String title; // AppBar başlığı
   final List<Widget>? actions; // AppBar actions (Logout vb.)
   final FloatingActionButton? floatingActionButton; // FAB (varsa)
+  final Color? bgcolor;
 
   const MainLayout({
     super.key,
@@ -15,6 +16,7 @@ class MainLayout extends StatelessWidget {
     required this.title,
     this.actions,
     this.floatingActionButton,
+    this.bgcolor
   });
 
   @override
@@ -23,6 +25,7 @@ class MainLayout extends StatelessWidget {
     // final AuthController authController = Get.find<AuthController>(); // Her seferinde bulmak yerine binding ile yönetmek daha iyi
 
     return Scaffold(
+      backgroundColor: bgcolor,
       appBar: AppBar(
         title: Text(title),
         actions: actions, // Dışarıdan gelen action'ları kullan
@@ -33,7 +36,7 @@ class MainLayout extends StatelessWidget {
           // *** DEĞİŞİKLİK: Padding eklendi ***
           child: Padding(
             // Yatayda (sağ ve sol) boşluk ekleyelim
-            padding: const EdgeInsets.symmetric(horizontal: 64.0), // 16.0 iyi bir başlangıç, ayarlayabilirsiniz
+            padding: const EdgeInsets.symmetric(horizontal: 16.0), // 16.0 iyi bir başlangıç, ayarlayabilirsiniz
             child: body, // Asıl içerik artık Padding içinde
           ),
         ),

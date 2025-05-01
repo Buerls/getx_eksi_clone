@@ -83,13 +83,29 @@ class ApiService {
     if (!publicPaths.contains(options.path)) {
       final accessToken = await getAccessToken(); // Public metodu kullan
       if (accessToken != null) {
-        options.headers['Authorization'] = 'Bearer $accessToken';
-        // debugPrint('Access token added to header for ${options.path}');
+        if (accessToken.startsWith('Bearer ')) {
+          // Zaten varsa direkt ata
+          options.headers['Authorization'] = accessToken;
+          debugPrint("--> Request Interceptor: Auth Header Found (prefixed): Bearer ${accessToken.substring(7, 20)}...");
+        } else {
+          // Yoksa "Bearer " ekleyerek ata
+          options.headers['Authorization'] = 'Bearer $accessToken';
+          debugPrint("--> Request Interceptor: Auth Header Attached: Bearer ${accessToken.substring(0, 15)}...");
+        }
       } else {
         debugPrint('Access token not found for protected route: ${options.path}');
       }
     } else {
       // debugPrint('Token not added for public route: ${options.path}');
+    }
+
+    final requestPath = options.path;
+    final authHeader = options.headers['Authorization'];
+    debugPrint("--> Request Interceptor: Path: $requestPath");
+    if (authHeader != null) {
+      debugPrint("--> Request Interceptor: Auth Header Attached: Bearer ${authHeader.substring(0, 15)}..."); // Token'ın başını logla
+    } else {
+      debugPrint("--> Request Interceptor: Auth Header NOT Attached for this request.");
     }
     handler.next(options);
   }
@@ -308,6 +324,7 @@ class ApiService {
           'content': content, // Entry içeriği
         },
       );
+      debugPrint("--> ApiService.createEntry: Sending data: $response");
       debugPrint('Entry created successfully for topic $topicId.');
       return response; // Başarılı yanıtı döndür (oluşturulan entry'i içerir)
     } on DioException catch (e) {
@@ -349,6 +366,22 @@ class ApiService {
     } catch (e) {
       debugPrint('Failed to remove vote (unexpected): $e');
       throw Exception('An unexpected error occurred while removing vote.');
+    }
+  }
+
+  Future<Response> getPopularTopics() async {
+    // Backend endpoint'inin '/topics/popular-today/' olduğunu varsayıyoruz
+    // (views.py'daki @action'da url_path='popular-today' belirlemiştik)
+    try {
+      final response = await _dio.get('/topics/popular-today/');
+      debugPrint('Popular topics fetched successfully.');
+      return response; // Backend listeyi doğrudan döndürüyor olmalı
+    } on DioException catch (e) {
+      debugPrint('Failed to get popular topics: ${e.response?.data ?? e.message}');
+      throw Exception('Failed to load popular topics: ${e.response?.data?['detail'] ?? e.message}');
+    } catch (e) {
+      debugPrint('Failed to get popular topics (unexpected): $e');
+      throw Exception('An unexpected error occurred while fetching popular topics.');
     }
   }
 

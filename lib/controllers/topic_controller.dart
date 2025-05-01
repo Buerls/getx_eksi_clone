@@ -20,7 +20,9 @@ class TopicController extends GetxController {
   var hasMoreTopics = true.obs; // Daha fazla başlık var mı?
   final RxnString errorMessage = RxnString(); // Hata mesajı
 
-
+  final RxBool isLoadingPopular = true.obs;
+  final RxList<Topic> popularTopicList = <Topic>[].obs;
+  final RxnString popularTopicsError = RxnString();
 
 
   final RxString searchQuery = ''.obs;
@@ -32,12 +34,14 @@ class TopicController extends GetxController {
   void onInit() {
     super.onInit();
     fetchTopics(isRefresh: true); // Başlangıçta normal yükleme
+    fetchPopularTopics();
 
     // Arama sorgusu değiştiğinde debounce ile fetchTopics'i çağır
     // 'debounce' GetX'in RxString'e eklediği bir extension metodudur.
     debounce(searchQuery, (_) {
       debugPrint("2. Debounce Triggered! Fetching for query: ${searchQuery.value}"); // Eklendi
       fetchTopics(isRefresh: true, query: searchQuery.value);
+
     },
       time: const Duration(milliseconds: 500), // 500ms bekleme süresi
     );
@@ -51,6 +55,35 @@ class TopicController extends GetxController {
   }
 
   // --- Metotlar ---
+
+  Future<void> fetchPopularTopics() async {
+    isLoadingPopular(true);
+    popularTopicsError(null);
+    try {
+      final response = await _apiService.getPopularTopics();
+      // Backend'in doğrudan bir liste döndürdüğünü varsayıyoruz
+      if (response.statusCode == 200 && response.data is List) {
+        final List<dynamic> results = response.data as List;
+        final List<Topic> newPopularTopics = results.map((json) => Topic.fromJson(json)).toList();
+        popularTopicList.assignAll(newPopularTopics); // Listeyi ata
+        print("Popular topics fetched: ${popularTopicList.length}");
+      } else {
+        // Eğer backend pagination yapısı döndürüyorsa (beklenmedik ama olabilir):
+        // final Map<String, dynamic> data = response.data;
+        // final List<dynamic> results = data['results'] as List? ?? [];
+        // ...
+        throw Exception('Popular topics API did not return a List as expected.');
+      }
+    } catch (e) {
+      print("Error fetching popular topics: $e");
+      popularTopicsError("Failed to load popular topics: ${e.toString().replaceFirst('Exception: ', '')}");
+      popularTopicList.clear();
+    } finally {
+      isLoadingPopular(false);
+    }
+  }
+
+
 
   // Başlıkları getiren ana metot
   Future<void> fetchTopics({bool isRefresh = false, String? query}) async {
@@ -142,8 +175,25 @@ class TopicController extends GetxController {
 
   // Yenileme için UI tarafından çağrılacak metot
   Future<void> refreshTopics() async {
-    // Mevcut searchQuery ile sayfayı yenile
-    await fetchTopics(isRefresh: true, query: searchQuery.value);
+    // Refresh hem normal listeyi (mevcut arama sorgusuyla) hem de popüler listeyi tetikler
+    print("Refreshing both topic lists...");
+    // isFirstLoad'ı tekrar true yapabiliriz ki ana liste için yüklenme göstergesi görünsün
+    isFirstLoad(true);
+    errorMessage(null); // Hataları temizle
+    popularTopicsError(null);
+
+    // İki isteği aynı anda başlat
+    final refreshNormalFuture = fetchTopics(isRefresh: true, query: searchQuery.value);
+    final refreshPopularFuture = fetchPopularTopics();
+
+    // İkisinin de bitmesini bekle (UI'ın daha tutarlı güncellenmesi için)
+    try {
+      await Future.wait([refreshNormalFuture, refreshPopularFuture]);
+    } catch(e) {
+      // Hatalar zaten ilgili metotlarda yakalanıp state'e yazılıyor
+      print("Error during parallel refresh: $e");
+    }
+    print("Both lists refreshed.");
   }
 
 }

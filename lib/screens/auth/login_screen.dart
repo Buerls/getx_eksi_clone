@@ -58,7 +58,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Login'),
+        title: const Text('Tatlı Sözlük - Login'),
         centerTitle: true, // Başlığı ortala (web için daha estetik olabilir)
       ),
       body: Center(
@@ -73,6 +73,14 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch, // Butonun genişlemesi için
                 children: [
+                  
+                  Container(
+                    width: 125,
+                    height: 125,
+                    child: Image.network("https://i.ibb.co/N66YxLMR/logo.png"),
+                  ),
+                  SizedBox(height: 25,),
+                  
                   TextFormField(
                     controller: _usernameController,
                     decoration: const InputDecoration(
